@@ -17,7 +17,8 @@ data class SongResponse(
     val genre_id: Int?,
     val genre: String?,
     val like_count: Int,
-    val comment_count: Int
+    val comment_count: Int,
+    val lyrics: String? = null
 )
 
 data class CommentResponse(

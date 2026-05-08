@@ -12,6 +12,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import coil.compose.AsyncImage
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -337,9 +338,7 @@ fun PlayerScreen(
     )
 
     // ── 가사 데이터 ──────────────────────────────────────────────────
-    val localSong = songList.getOrNull(songId % songList.size)
-    val lyrics = localSong?.lyrics ?: emptyList()
-    val nonEmptyLyrics = lyrics.filter { it.isNotBlank() }
+    val nonEmptyLyrics = (songInfo?.lyrics?.split("\n") ?: emptyList()).filter { it.isNotBlank() }
     val lyricIdx = currentLyricIndex(currentSeconds, totalSeconds.coerceAtLeast(1), nonEmptyLyrics.size)
     val currentLyric = nonEmptyLyrics.getOrNull(lyricIdx) ?: ""
     val nextLyric    = nonEmptyLyrics.getOrNull(lyricIdx + 1) ?: ""
@@ -397,15 +396,25 @@ fun PlayerScreen(
                     }
                     .clip(RoundedCornerShape(0.dp))
             ) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(Brush.linearGradient(listOf(NC_PRIMARY, NC_ACCENT))),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.MusicNote, contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = NC_BG.copy(alpha = if (revealed) 1f else 0.15f))
+                val coverUrl = if (revealed) songInfo?.cover_path?.let { RetrofitClient.coverUrl(it) } else null
+                if (coverUrl != null) {
+                    AsyncImage(
+                        model = coverUrl,
+                        contentDescription = "앨범 표지",
+                        modifier = Modifier.matchParentSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Brush.linearGradient(listOf(NC_PRIMARY, NC_ACCENT))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.MusicNote, contentDescription = null,
+                            modifier = Modifier.size(80.dp),
+                            tint = NC_BG.copy(alpha = if (revealed) 1f else 0.15f))
+                    }
                 }
                 if (!revealed) {
                     Box(

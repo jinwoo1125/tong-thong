@@ -40,7 +40,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         enableEdgeToEdge()
         // 앱 시작 시 저장된 토큰으로 로그인 상태 복원
         isLoggedIn = TokenManager.isLoggedIn()
