@@ -11,9 +11,16 @@ import androidx.compose.ui.graphics.Color
 // ── 전역 로그인 상태 ──────────────────────────────
 var isLoggedIn by mutableStateOf(false)
 
+// ── 차트 리프레시 트리거 (업로드 성공 시 increment) ──
+var chartRefreshKey by mutableStateOf(0)
+
 // ── 전역 프로필 상태 ──────────────────────────────
 var globalAvatarIndex by mutableStateOf(0)
 var globalNickname by mutableStateOf("유저 이름")
+
+// ── 전역 댓글 캐시 (PlayerScreen → MyPage 실시간 연동) ──
+data class LocalComment(val songId: Int, val blindTitle: String, val content: String)
+val myLocalComments = androidx.compose.runtime.mutableStateListOf<LocalComment>()
 
 // ── 테마 모드 ─────────────────────────────────────
 enum class ThemeMode { SYSTEM, DARK, LIGHT }
@@ -37,7 +44,7 @@ private val DarkColors = AppColorScheme(
     bg        = Color(0xFF0E1117),
     surface   = Color(0xFF171B24),
     surfaceHi = Color(0xFF202736),
-    primary   = Color(0xFFFFC857),
+    primary   = Color(0xFFFFDA79),
     accent    = Color(0xFF58C4DD),
     green     = Color(0xFF35D07F),
     text      = Color.White,

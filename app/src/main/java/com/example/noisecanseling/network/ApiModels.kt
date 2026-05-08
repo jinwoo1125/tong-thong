@@ -8,12 +8,12 @@ data class AuthResponse(val token: String, val nickname: String)
 
 data class SongResponse(
     val id: Int,
-    val title: String,
-    val file_path: String,
+    val title: String?,
+    val file_path: String?,
     val cover_path: String?,
     val play_count: Int,
-    val created_at: String,
-    val uploader: String,
+    val created_at: String?,
+    val uploader: String?,
     val genre_id: Int?,
     val genre: String?,
     val like_count: Int,
@@ -52,4 +52,36 @@ data class RatingResponse(
     val avg_score: String?,
     val count: Int,
     val my_score: Int?
+)
+
+data class UserProfileRequest(
+    val debut_date: String,
+    val artist_type: String,
+    val agency: String,
+    val bio: String
+)
+
+data class UserProfileResponse(
+    val nickname: String,
+    val debut_date: String?,
+    val artist_type: String?,
+    val agency: String?,
+    val bio: String?,
+    val avatar_url: String?
+)
+
+data class MyCommentItem(
+    val songId: Int,
+    val blindSongTitle: String,
+    val commentId: Int,
+    val content: String,
+    val createdAt: String
+)
+
+data class FollowResponse(val following: Boolean)
+
+data class ArtistStatsResponse(
+    val upload_count: Int,
+    val total_play_count: Int,
+    val follower_count: Int
 )

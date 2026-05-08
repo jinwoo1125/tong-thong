@@ -32,7 +32,9 @@ interface ApiService {
         @Part song: MultipartBody.Part,
         @Part cover: MultipartBody.Part?,
         @Part("title") title: RequestBody,
-        @Part("genre_id") genreId: RequestBody?
+        @Part("genre_id") genreId: RequestBody?,
+        @Part("description") description: RequestBody?,
+        @Part("lyrics") lyrics: RequestBody?
     ): Response<MessageResponse>
 
     // ── 좋아요 ────────────────────────────────────
@@ -102,10 +104,58 @@ interface ApiService {
         @Path("id") id: Int
     ): Response<RatingResponse>
 
+    @DELETE("api/songs/{id}")
+    suspend fun deleteSong(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
+    ): Response<MessageResponse>
+
     // ── 차트 ──────────────────────────────────────
     @GET("api/charts")
     suspend fun getChart(
         @Query("period") period: String = "daily",
         @Query("genre_id") genreId: Int? = null
     ): Response<List<SongResponse>>
+
+    // ── 아티스트 프로필 ────────────────────────────
+    @PUT("api/profile")
+    suspend fun saveProfile(
+        @Header("Authorization") token: String,
+        @Body body: UserProfileRequest
+    ): Response<MessageResponse>
+
+    @GET("api/profile")
+    suspend fun getMyProfile(
+        @Header("Authorization") token: String
+    ): Response<UserProfileResponse>
+
+    @GET("api/profile/{nickname}")
+    suspend fun getUserProfile(
+        @Path("nickname") nickname: String
+    ): Response<UserProfileResponse>
+
+    // ── 팔로우 ────────────────────────────────────
+    @POST("api/follow/{nickname}")
+    suspend fun followArtist(
+        @Header("Authorization") token: String,
+        @Path("nickname") nickname: String
+    ): Response<FollowResponse>
+
+    @DELETE("api/follow/{nickname}")
+    suspend fun unfollowArtist(
+        @Header("Authorization") token: String,
+        @Path("nickname") nickname: String
+    ): Response<FollowResponse>
+
+    @GET("api/follow/{nickname}")
+    suspend fun getFollowStatus(
+        @Header("Authorization") token: String,
+        @Path("nickname") nickname: String
+    ): Response<FollowResponse>
+
+    // ── 아티스트 통계 ─────────────────────────────
+    @GET("api/stats/{nickname}")
+    suspend fun getArtistStats(
+        @Path("nickname") nickname: String
+    ): Response<ArtistStatsResponse>
 }

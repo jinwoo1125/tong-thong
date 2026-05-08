@@ -1,12 +1,17 @@
 package com.example.noisecanseling
 
-import android.net.Uri
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
@@ -29,11 +34,25 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 class MainActivity : ComponentActivity() {
+
+    private val requestNotificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* no-op */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         enableEdgeToEdge()
         // 앱 시작 시 저장된 토큰으로 로그인 상태 복원
         isLoggedIn = TokenManager.isLoggedIn()
+
+        // Android 13+ 알림 권한 요청
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
 
         setContent {
             NoisecanselingTheme {
@@ -70,7 +89,6 @@ fun AppNavigation() {
         if (backPressedOnce) { delay(2000L); backPressedOnce = false }
     }
 
-    var pendingUploadUri by remember { mutableStateOf<Uri?>(null) }
     val scope = rememberCoroutineScope()
 
     NavHost(navController = navController, startDestination = "splash") {
@@ -90,8 +108,10 @@ fun AppNavigation() {
                 onLoginRequired = { navController.navigate("login") },
                 onNavigateToPlayer = { index, autoPlay -> navController.navigate("player/$index?autoPlay=$autoPlay") },
                 onNavigateToPlaylist = { navController.navigate("playlist") },
-                onNavigateToUpload = { navController.navigate("upload_initial") },
-                onNavigateToSettings = { navController.navigate("settings") }
+                onNavigateToUpload = { navController.navigate("upload") },
+                onNavigateToSettings = { navController.navigate("settings") },
+                onNavigateToArtist = { name -> navController.navigate("artist/${name}") },
+                onNavigateToGenre = { name -> navController.navigate("genre/${name}") }
             )
         }
 
@@ -143,7 +163,17 @@ fun AppNavigation() {
                 initialSongIndex = index,
                 autoPlay = autoPlay,
                 onBackClick = { navController.popBackStack() },
-                onPlaylistClick = { navController.navigate("playlist") }
+                onPlaylistClick = { navController.navigate("playlist") },
+                onNextTrack = { nextId ->
+                    navController.navigate("player/$nextId?autoPlay=true") {
+                        popUpTo("player/$index?autoPlay=$autoPlay") { inclusive = true }
+                    }
+                },
+                onPrevTrack = { prevId ->
+                    if (prevId >= 0) navController.navigate("player/$prevId?autoPlay=true") {
+                        popUpTo("player/$index?autoPlay=$autoPlay") { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -158,48 +188,49 @@ fun AppNavigation() {
             )
         }
 
-        composable("upload_initial") {
-            UploadInitialScreen(
-                onBackClick = { navController.popBackStack() },
-                onUploadClick = { uri, name ->
-                    pendingUploadUri = uri
-                    navController.navigate("upload_detail/${name.ifBlank { "file" }}")
-                }
-            )
-        }
-
-        composable(
-            route = "upload_detail/{fileName}",
-            arguments = listOf(navArgument("fileName") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val fileName = backStackEntry.arguments?.getString("fileName") ?: ""
+        composable("upload") {
             val ctx = LocalContext.current
-            UploadDetailScreen(
-                fileName = fileName,
+            UploadScreen(
                 onBackClick = { navController.popBackStack() },
-                onDeleteFile = { pendingUploadUri = null; navController.popBackStack() },
-                onUploadClick = { title, genreId ->
-                    val uri = pendingUploadUri ?: return@UploadDetailScreen
+                onUploadClick = { data ->
                     scope.launch {
                         try {
-                            val inputStream = ctx.contentResolver.openInputStream(uri)
-                            val bytes = inputStream?.readBytes() ?: return@launch
-                            val mimeType = ctx.contentResolver.getType(uri) ?: "audio/mpeg"
+                            val plain = "text/plain".toMediaTypeOrNull()
+
+                            // 음원 파일
+                            val audioStream = ctx.contentResolver.openInputStream(data.audioUri)
+                            val audioBytes = audioStream?.readBytes() ?: return@launch
+                            val audioMime = ctx.contentResolver.getType(data.audioUri) ?: "audio/mpeg"
                             val songPart = MultipartBody.Part.createFormData(
-                                "song", fileName,
-                                bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+                                "song", data.audioFileName,
+                                audioBytes.toRequestBody(audioMime.toMediaTypeOrNull())
                             )
-                            val titleBody = title.toRequestBody("text/plain".toMediaTypeOrNull())
+
+                            // 표지 이미지 (선택)
+                            val coverPart = data.coverUri?.let { uri ->
+                                val bytes = ctx.contentResolver.openInputStream(uri)?.readBytes()
+                                val mime = ctx.contentResolver.getType(uri) ?: "image/jpeg"
+                                bytes?.let {
+                                    MultipartBody.Part.createFormData(
+                                        "cover", "cover.jpg",
+                                        it.toRequestBody(mime.toMediaTypeOrNull())
+                                    )
+                                }
+                            }
+
                             val res = RetrofitClient.api.uploadSong(
                                 token = TokenManager.getBearerToken(),
                                 song = songPart,
-                                cover = null,
-                                title = titleBody,
-                                genreId = genreId?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
+                                cover = coverPart,
+                                title = data.title.toRequestBody(plain),
+                                genreId = data.genreId?.toString()?.toRequestBody(plain),
+                                description = data.description.ifBlank { null }?.toRequestBody(plain),
+                                lyrics = data.lyrics.ifBlank { null }?.toRequestBody(plain)
                             )
                             if (res.isSuccessful) {
+                                chartRefreshKey++  // 차트 자동 갱신 트리거
                                 navController.navigate("upload_complete") {
-                                    popUpTo("upload_initial") { inclusive = true }
+                                    popUpTo("upload") { inclusive = true }
                                 }
                             } else {
                                 Toast.makeText(ctx, "업로드 실패: ${res.code()}", Toast.LENGTH_SHORT).show()
@@ -209,6 +240,30 @@ fun AppNavigation() {
                         }
                     }
                 }
+            )
+        }
+
+        composable(
+            route = "artist/{artistName}",
+            arguments = listOf(navArgument("artistName") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val artistName = backStackEntry.arguments?.getString("artistName") ?: ""
+            ArtistDetailScreen(
+                artistName = artistName,
+                onBackClick = { navController.popBackStack() },
+                onSongClick = { songId -> navController.navigate("player/$songId?autoPlay=true") }
+            )
+        }
+
+        composable(
+            route = "genre/{genreName}",
+            arguments = listOf(navArgument("genreName") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val genreName = backStackEntry.arguments?.getString("genreName") ?: ""
+            GenreDetailScreen(
+                genreName = genreName,
+                onBackClick = { navController.popBackStack() },
+                onSongClick = { songId -> navController.navigate("player/$songId?autoPlay=true") }
             )
         }
 

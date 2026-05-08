@@ -459,7 +459,7 @@ private fun SettingsStaticItem(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = AppPrimary, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(14.dp))
             Text(text = title, color = AppText, fontSize = 15.sp, modifier = Modifier.weight(1f))
             Text(text = value, color = AppSubText, fontSize = 13.sp)
@@ -507,7 +507,7 @@ private fun SettingsValueItem(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = AppPrimary, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(14.dp))
             Text(text = title, color = AppText, fontSize = 15.sp, modifier = Modifier.weight(1f))
             Text(text = value, color = AppSubText, fontSize = 13.sp)
@@ -534,7 +534,7 @@ private fun SettingsToggleItem(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = AppPrimary, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = title, color = AppText, fontSize = 15.sp)
